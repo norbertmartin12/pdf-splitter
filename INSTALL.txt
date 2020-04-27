@@ -1,0 +1,3 @@
+Launch PdfSplitter.bat
+If java is not recognize as command
+Download and install java on your computer https://www.java.com/fr/download/
