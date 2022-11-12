@@ -10,6 +10,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 
 public class Controler {
 
+    private static final String INCONNUS = "inconnus";
     private static final String BULLETINS = "bulletins";
     // TODO : simplify meta data read/write
     // TODO : question ? create or not all path if doesn't exist - new year ?
@@ -31,9 +32,9 @@ public class Controler {
         PDDocument inPDF = null;
         List<PDDocument> outPdDocuments = null;
         try {
-            ui.println("#bonjour " + System.getProperty("user.name"));
-            ui.println(">sélection du document à découper");
-            File pdfFile = ui.requestFile("Choisir le document à traiter", EXEC_FOLDER, ui.fileFilter("Fichier PDF", Tool.PDF_EXTENSION));
+            ui.println("Bonjour " + System.getProperty("user.name"));
+            ui.println("> sélectionner le document à découper");
+            File pdfFile = ui.requestFile("Document à traiter", EXEC_FOLDER, ui.fileFilter("Fichier PDF", Tool.PDF_EXTENSION));
             if (pdfFile == null) {
                 ui.println("#aucun document sélectionné, fin du programme");
                 return;
@@ -41,47 +42,65 @@ public class Controler {
             inPDF = tool.openPdf(pdfFile, scanner);
             Map<Integer, AgentBookmark> bookmarksByPage = tool.identifyBookmarks(inPDF);
             if (bookmarksByPage.size() > 0) {
+                ui.println("#" + bookmarksByPage.size() + " signets trouvés");
                 outPdDocuments = tool.generateFiles(inPDF, bookmarksByPage);
             } else {
                 int nbPagesPerDocument = ui.requestNbPagesPerChildDocument(scanner, inPDF.getPages().getCount());
                 if (inPDF.getPages().getCount() % nbPagesPerDocument != 0) {
-                    ui.errPrintln("#!" + inPDF.getPages().getCount() + " n'est pas un multiple de " + nbPagesPerDocument + " le dernier document aura moins de pages");
+                    ui.errPrintln("!" + inPDF.getPages().getCount() + " n'est pas un multiple de " + nbPagesPerDocument + " le dernier document aura moins de pages");
                 }
-                outPdDocuments = tool.generateFiles(inPDF, nbPagesPerDocument);
+                outPdDocuments = tool.generateRawOutputFiles(inPDF, nbPagesPerDocument);
             }
             if (outPdDocuments == null) {
                 exitOnException("generate files", new IllegalStateException("no child pdf generated"));
             }
-            File outputFolder = ui.requestOutputFolder("Choisir le dossier de destination de la société", pdfFile.getParentFile());
+            ui.println("> Sélectionner le dossier destination");
+            File outputFolder = ui.requestOutputFolder("Dossier destination", pdfFile.getParentFile());
             if (outputFolder == null) {
-                ui.println("#dossier de la société non sélectionné, fin du programme");
+                ui.println("#aucun dossier sélectionné, fin du programme");
                 return;
             }
-            ui.println("#dossier de la société: " + outputFolder.getAbsolutePath());
-            ui.print("#rangement des fichiers");
-            File unknownFolder = new File(outputFolder + File.separator + "inconnus");
+            ui.println("#dossier sortie: " + outputFolder.getAbsolutePath());
+
+            File toSendFolder = new File(outputFolder + File.separator + Tool.TO_SEND_FOLDER);
+            ui.println("#génération groupée: " + toSendFolder.getAbsolutePath());
+            toSendFolder.mkdir();
+            for (PDDocument outPdDocument : outPdDocuments) {
+                String fileName = outPdDocument.getDocumentCatalog().getMetadata().getCOSObject().getString(Tool.DATA_FILENAME);
+                File outFile = new File(toSendFolder + File.separator + BULLETINS + File.separator + fileName);
+                tool.saveFile(outFile, outPdDocument);
+            }
+
+            ui.println("#rangement des fichiers");
+            File unknownFolder = new File(outputFolder + File.separator + INCONNUS);
             for (PDDocument outPdDocument : outPdDocuments) {
                 String searchedFolder = outPdDocument.getDocumentCatalog().getMetadata().getCOSObject().getString(Tool.DATA_FOLDER);
                 File targetFolder = null;
                 if (!searchedFolder.equals(Tool.UNKNOWN_FOLDER)) {
                     targetFolder = tool.searchFolder(outputFolder, searchedFolder);
+                    if (targetFolder == null) {
+                        targetFolder = tool.magicSearchFolder(outputFolder, searchedFolder);
+                    }
                 }
                 if (targetFolder == null) {
                     targetFolder = unknownFolder;
+                    ui.errPrintln("!" + searchedFolder + " non trouvé");
+                } else {
+                    ui.println(searchedFolder + " trouvé " + targetFolder.getAbsolutePath());
+                    targetFolder = new File(targetFolder.getAbsolutePath() + File.separator + BULLETINS);
                 }
                 try {
                     String fileName = outPdDocument.getDocumentCatalog().getMetadata().getCOSObject().getString(Tool.DATA_FILENAME);
-                    tool.saveFile(new File(targetFolder + File.separator + BULLETINS + File.separator + fileName), outPdDocument);
+                    tool.saveFile(new File(targetFolder + File.separator + fileName), outPdDocument);
                 } catch (IOException e) {
                     exitOnException("save file", e);
                 }
-                ui.print("/");
             }
             ui.println("").println("#les documents ont été générés et rangés");
             if (unknownFolder.exists() && unknownFolder.list().length > 0) {
                 ui.errPrintln("#!" + unknownFolder.getAbsolutePath());
-                ui.errPrintln("#!" + unknownFolder.list().length + " documents non triés (ce traitement ou un précdent)");
-                ui.errPrintln("#!triez manuellement ou supprimez les pour faire disparaitre cette alerte");
+                ui.errPrintln("#!" + unknownFolder.listFiles().length + " documents non rangés (ce traitement ou un précdent)");
+                ui.errPrintln("#!rangez manuellement ou supprimez les pour faire disparaitre cette alerte");
             }
         } catch (ProgramExceptionExit e) {
             exitOnException("launch - managed exception", e);

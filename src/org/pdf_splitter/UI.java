@@ -46,7 +46,7 @@ public class UI {
     public File requestFile(String title, File openAt, FileFilter fileFilter) {
         checkInit();
         JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle(this.title + "-" + title);
+        chooser.setDialogTitle(this.title + " - " + title);
         chooser.setCurrentDirectory(openAt);
         chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
         chooser.setFileFilter(fileFilter);
@@ -65,7 +65,7 @@ public class UI {
     public File requestOutputFolder(String title, File openAt) {
         checkInit();
         JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle(this.title + "-" + title);
+        chooser.setDialogTitle(this.title + " - " + title);
         chooser.setCurrentDirectory(openAt);
         chooser.setDialogType(JFileChooser.SAVE_DIALOG);
         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -77,14 +77,14 @@ public class UI {
     }
 
     public String requestPassword(Scanner scanner) {
-        print(">saisir le mot de passe: ");
+        print("> saisir le mot de passe: ");
         return scanner.nextLine();
     }
 
     public int requestNbPagesPerChildDocument(Scanner scanner, int nbPages) {
         int inputNbPagePerDocument = -1;
         while (inputNbPagePerDocument <= 0) {
-            print(">nombre de pages par sous document ? ");
+            print("> nombre de pages par sous document ? ");
             inputNbPagePerDocument = scanner.nextInt();
         }
         return inputNbPagePerDocument;

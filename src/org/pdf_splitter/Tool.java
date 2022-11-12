@@ -6,10 +6,12 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 
 import org.apache.pdfbox.multipdf.Splitter;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -19,6 +21,7 @@ import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlin
 
 public class Tool {
 
+    public static final String TO_SEND_FOLDER = "TO_SEND";
     public static final String DATA_FILENAME = "pdfsplitter_title";
     public static final String DATA_FOLDER = "pdfsplitter_folder";
     public static final String UNKNOWN_FOLDER = "pdfsplitter_unknown_folder";
@@ -34,7 +37,7 @@ public class Tool {
         // 1st try without password
         PDDocument inPDF = null;
         try {
-            ui.println("#ouverture du document: " + pdfFile.getAbsolutePath());
+            ui.println("#ouverture : " + pdfFile.getAbsolutePath());
             inPDF = PDDocument.load(pdfFile, NO_PASSWORD);
             return inPDF;
         } catch (InvalidPasswordException e) {
@@ -46,7 +49,7 @@ public class Tool {
                     inPDF = PDDocument.load(pdfFile, password);
                     return inPDF;
                 } catch (InvalidPasswordException e1) {
-                    ui.errPrintln("#!le mot de passe  ne fonctionne pas");
+                    ui.errPrintln("! le mot de passe  ne fonctionne pas");
                     retry++;
                 } catch (IOException e1) {
                     throw new ProgramExceptionExit("pdf load:" + pdfFile.getAbsolutePath(), e1);
@@ -87,23 +90,34 @@ public class Tool {
     }
 
     public List<PDDocument> generateFiles(PDDocument inPDF, Map<Integer, AgentBookmark> bookmarksByPage) throws ProgramExceptionExit {
-        ui.println("#" + bookmarksByPage.size() + " agents trouvés");
         List<PDDocument> outPdDocuments = new LinkedList<PDDocument>();
+        Set<String> viewedFiles = new HashSet<>();
+        int duplicatesFound = 0;
         for (AgentBookmark bookmark : bookmarksByPage.values()) {
             try {
+                String title = bookmark.getStandardizedTitle();
+                String folder = bookmark.getStandardizedFolder();
+                String key = title + folder;
+                if (viewedFiles.contains(key)) {
+                    duplicatesFound++;
+                    continue;
+                }
+                viewedFiles.add(key);
                 PDDocument outPdDocument = splitFile(inPDF, bookmark.getStartAtPage(), bookmark.getEndAtPage());
-                addMetaData(outPdDocument, bookmark.getStandardizedTitle(), bookmark.getStandardizedFolder());
+                addMetaData(outPdDocument, title, folder);
                 outPdDocuments.add(outPdDocument);
             } catch (IOException e) {
                 throw new ProgramExceptionExit("split file by bookmarks", e);
             }
         }
+        ui.errPrintln("!ignored duplicated bookmarks in document: " + duplicatesFound);
+
         return outPdDocuments;
     }
 
     /**
      * @param outPdDocument
-     * @param fileName + PDF_EXTENSION will be added
+     * @param fileName      + PDF_EXTENSION will be added
      * @param folder
      */
     private void addMetaData(PDDocument outPdDocument, String fileName, String folder) {
@@ -120,7 +134,7 @@ public class Tool {
         return splitter.split(inPDF).get(0);
     }
 
-    public List<PDDocument> generateFiles(PDDocument inPDF, Integer nbPagesPerDocument) throws ProgramExceptionExit {
+    public List<PDDocument> generateRawOutputFiles(PDDocument inPDF, Integer nbPagesPerDocument) throws ProgramExceptionExit {
         try {
             int nbDoc = 0;
             List<PDDocument> outPdDocuments = splitFile(inPDF, nbPagesPerDocument);
@@ -160,12 +174,32 @@ public class Tool {
     };
 
     public File searchFolder(File startFolder, String searchedFolder) {
-        ui.print(".");
         for (File folder : startFolder.listFiles(FOLDER_FILTER)) {
             if (searchedFolder.equalsIgnoreCase(folder.getName())) {
                 return folder;
             }
+
             File result = searchFolder(folder, searchedFolder);
+            if (result != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    public File magicSearchFolder(File startFolder, String searchedFolder) {
+        for (File folder : startFolder.listFiles(FOLDER_FILTER)) {
+            boolean magicFound = true;
+            for (String partWord : searchedFolder.split("[-_ ]")) {
+                if (!folder.getName().toLowerCase().contains(partWord.toLowerCase())) {
+                    magicFound = false;
+                    break;
+                }
+            }
+            if (magicFound) {
+                return folder;
+            }
+            File result = magicSearchFolder(folder, searchedFolder);
             if (result != null) {
                 return result;
             }
