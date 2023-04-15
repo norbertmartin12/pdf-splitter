@@ -2,6 +2,8 @@ package org.pdf_splitter;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -58,7 +60,8 @@ public class Controler {
             tool.generateGroupedOutputChildPdfs(toSendFolder, outPdDocuments);
 
             File unknownFolder = new File(outputFolder + File.separator + Tool.INCONNUS);
-            tool.generateDispatchedOutputChildPdfs(outPdDocuments, outputFolder, unknownFolder);
+            String periodSubfolder = new SimpleDateFormat("yyyy " + File.separator + "MM").format(new Date());
+            tool.generateDispatchedOutputChildPdfs(outPdDocuments, outputFolder, periodSubfolder, unknownFolder);
 
         } catch (ProgramExceptionExit e) {
             exitOnException("launch - managed exception", e);

@@ -162,7 +162,8 @@ public class Tool {
         }
     }
 
-    public void generateDispatchedOutputChildPdfs(List<PDDocument> outPdDocuments, File outputFolder, File unknownFolder) throws ProgramExceptionExit, IOException {
+    public void generateDispatchedOutputChildPdfs(List<PDDocument> outPdDocuments, File outputFolder, String periodSubfolder, File unknownFolder)
+            throws ProgramExceptionExit, IOException {
         ui.println("#rangement des fichiers");
         for (PDDocument outPdDocument : outPdDocuments) {
             String searchedFolder = outPdDocument.getDocumentCatalog().getMetadata().getCOSObject().getString(Tool.DATA_FOLDER);
@@ -178,7 +179,7 @@ public class Tool {
                 ui.errPrintln("!" + searchedFolder + " non trouvé");
             } else {
                 ui.println(searchedFolder + " trouvé " + targetFolder.getAbsolutePath());
-                targetFolder = new File(targetFolder.getAbsolutePath() + File.separator + BULLETINS);
+                targetFolder = new File(targetFolder.getAbsolutePath() + File.separator + BULLETINS + File.separator + periodSubfolder);
             }
             String fileName = outPdDocument.getDocumentCatalog().getMetadata().getCOSObject().getString(Tool.DATA_FILENAME);
             saveFile(new File(targetFolder + File.separator + fileName), outPdDocument);
