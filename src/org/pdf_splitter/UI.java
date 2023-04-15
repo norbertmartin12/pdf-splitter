@@ -14,12 +14,15 @@ public class UI {
 
     private static final String WINDOWS_LOOK_AND_FEEL = "windows";
     private final String title;
-    private JFrame jFrame;
+    private JFrame parentInvisbileJFrame;
 
     public UI(String title) {
         this.title = title;
     }
 
+    /**
+     * Initializes parent component for future dialog usages
+     */
     public void init() {
         for (LookAndFeelInfo lookAndFeel : UIManager.getInstalledLookAndFeels()) {
             if (lookAndFeel.getName().equalsIgnoreCase(WINDOWS_LOOK_AND_FEEL)) {
@@ -32,25 +35,37 @@ public class UI {
             }
         }
         println("#" + title);
-        jFrame = new JFrame();
-        jFrame.setTitle(title);
-        jFrame.setSize(80, 20);
+        parentInvisbileJFrame = new JFrame();
+        parentInvisbileJFrame.setTitle(title);
+        parentInvisbileJFrame.setSize(80, 20);
     }
 
     /**
+     * Releases parent component
+     */
+    public void release() {
+        if (parentInvisbileJFrame != null) {
+            parentInvisbileJFrame.dispose();
+        }
+    }
+
+    /**
+     * Requests file
+     * 
      * @param title
      * @param openAt
      * @param fileFilter
      * @return null if none selected
      */
     public File requestFile(String title, File openAt, FileFilter fileFilter) {
-        checkInit();
+        println("Bonjour " + System.getProperty("user.name"));
+        println("> sélectionner le document à découper");
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle(this.title + " - " + title);
         chooser.setCurrentDirectory(openAt);
         chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
         chooser.setFileFilter(fileFilter);
-        int option = chooser.showOpenDialog(jFrame);
+        int option = chooser.showOpenDialog(parentInvisbileJFrame);
         if (option == JFileChooser.APPROVE_OPTION) {
             return chooser.getSelectedFile();
         }
@@ -63,14 +78,15 @@ public class UI {
      * @return null if none selected
      */
     public File requestOutputFolder(String title, File openAt) {
-        checkInit();
+        println("> Sélectionner le dossier destination");
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle(this.title + " - " + title);
         chooser.setCurrentDirectory(openAt);
         chooser.setDialogType(JFileChooser.SAVE_DIALOG);
         chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        int option = chooser.showOpenDialog(jFrame);
+        int option = chooser.showOpenDialog(parentInvisbileJFrame);
         if (option == JFileChooser.APPROVE_OPTION) {
+            println("#dossier sortie: " + chooser.getSelectedFile().getAbsolutePath());
             return chooser.getSelectedFile();
         }
         return null;
@@ -81,31 +97,34 @@ public class UI {
         return scanner.nextLine();
     }
 
-    public int requestNbPagesPerChildDocument(Scanner scanner, int nbPages) {
-        int inputNbPagePerDocument = -1;
-        while (inputNbPagePerDocument <= 0) {
-            print("> nombre de pages par sous document ? ");
-            inputNbPagePerDocument = scanner.nextInt();
-        }
-        return inputNbPagePerDocument;
-    }
-
-    private void checkInit() {
-        if (jFrame == null) {
-            init();
-        }
-    }
-
+    /**
+     * Prints out message and ends line
+     * 
+     * @param msg
+     * @return this
+     */
     public UI println(String msg) {
         System.out.println(msg);
         return this;
     }
 
+    /**
+     * Prints out message
+     * 
+     * @param msg
+     * @return this
+     */
     public UI print(String msg) {
         System.out.print(msg);
         return this;
     }
 
+    /**
+     * Prints err message and ends line
+     * 
+     * @param msg
+     * @return this
+     */
     public UI errPrintln(String msg) {
         System.err.println(msg);
         return this;
@@ -114,7 +133,7 @@ public class UI {
     /**
      * @param description
      * @param extension
-     * @return
+     * @return associated FileFilter
      */
     public FileFilter fileFilter(final String description, final String extension) {
         return new FileFilter() {
@@ -130,9 +149,4 @@ public class UI {
         };
     }
 
-    public void release() {
-        if (jFrame != null) {
-            jFrame.dispose();
-        }
-    }
 }

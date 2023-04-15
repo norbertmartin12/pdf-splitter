@@ -8,4 +8,7 @@ public class ProgramExceptionExit extends Exception {
         super(msg, t);
     }
 
+    public ProgramExceptionExit(String msg) {
+        super(msg);
+    }
 }

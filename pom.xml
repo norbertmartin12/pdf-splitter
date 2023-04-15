@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.pdf_splitter</groupId>
 	<artifactId>PdfSplitter</artifactId>
-	<version>1.0</version>
+	<version>1.10</version>
 	<name>PdfSplitter</name>
 	<description>Split your PDF by bookmarks or as needed</description>
 	<dependencies>
